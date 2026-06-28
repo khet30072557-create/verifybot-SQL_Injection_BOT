@@ -11,7 +11,7 @@ PermissionsBitField
 } = require("discord.js");
 
 const TOKEN = process.env.TOKEN;
-const ROLE_ID = "ใส่_ROLE_ID_ตรงนี้";
+const ROLE_ID = "1520398527069687901";
 
 const client = new Client({
 intents: [
@@ -28,13 +28,13 @@ client.once(Events.ClientReady, () => {
 console.log(`ออนไลน์: ${client.user.tag}`);
 });
 
-client.on(Events.MessageCreate, async (message)=>{
+client.on(Events.MessageCreate, async (message) => {
 
 if(message.author.bot) return;
 if(!message.guild) return;
 
-// !verify
-if(message.content === "!verify"){
+// Verify
+if(message.content === "!verify") {
 
 const row = new ActionRowBuilder()
 .addComponents(
@@ -52,39 +52,28 @@ components:[row]
 }
 
 // Anti-spam
-if(
-message.member.permissions.has(
+if(message.member.permissions.has(
 PermissionsBitField.Flags.Administrator
-)
-)return;
+)) return;
 
 const userId = message.author.id;
 const now = Date.now();
 
-let data = userMessages.get(userId);
-
-if(!data){
-
-userMessages.set(userId,{
-count:1,
-lastMessage:now
-});
-
-return;
+if(!userMessages.has(userId)){
+userMessages.set(userId, []);
 }
 
-if(now - data.lastMessage > 5000){
+const timestamps = userMessages.get(userId);
 
-data.count = 1;
-data.lastMessage = now;
+timestamps.push(now);
 
-return;
-}
+const filtered = timestamps.filter(
+time => now - time < 5000
+);
 
-data.count++;
-data.lastMessage = now;
+userMessages.set(userId, filtered);
 
-if(data.count >= 5){
+if(filtered.length >= 5){
 
 await message.delete().catch(()=>{});
 
@@ -94,53 +83,35 @@ content:`⚠️ ${message.author} กรุณาหยุดสแปม`
 
 }
 
-if(data.count >= 10){
+if(filtered.length >= 10){
 
 await message.member.timeout(
 600000,
 "Spam detected"
 ).catch(()=>{});
 
-await message.channel.send({
-content:`🚫 ${message.author} ถูก Timeout 10 นาที`
-});
-
-data.count=0;
-
 }
 
 });
 
-client.on(
-Events.InteractionCreate,
-async interaction=>{
+client.on(Events.InteractionCreate, async (interaction)=>{
 
 if(!interaction.isButton()) return;
 
 if(interaction.customId==="verify"){
 
-const role =
-interaction.guild.roles.cache.get(
-ROLE_ID
-);
+const role = interaction.guild.roles.cache.get(ROLE_ID);
 
-if(!role){
+if(role){
 
-return interaction.reply({
-content:"❌ ไม่พบยศ",
-ephemeral:true
-});
-
-}
-
-await interaction.member.roles.add(
-role
-);
+await interaction.member.roles.add(role);
 
 await interaction.reply({
 content:"✅ รับยศเรียบร้อย",
 ephemeral:true
 });
+
+}
 
 }
 
