@@ -27,61 +27,52 @@ GatewayIntentBits.MessageContent
 // เก็บข้อความของแต่ละคน
 const userMessages = new Map();
 
-client.once(Events.ClientReady, () => {
-console.log(`ออนไลน์: ${client.user.tag}`);
-});
-
 client.on(Events.MessageCreate, async (message) => {
 
 if(message.author.bot) return;
 if(!message.guild) return;
 
-// ===== ระบบ Verify =====
-
-if(message.content === "!verify"){
-
-const row = new ActionRowBuilder()
-.addComponents(
-new ButtonBuilder()
-.setCustomId("verify")
-.setLabel("✅ รับยศแฮกเกอร์ฝึกหัด")
-.setStyle(ButtonStyle.Success)
-);
-
-await message.channel.send({
-content:"กดปุ่มเพื่อยืนยันตัวตนเป็นเเฮกเกอร์ฝึกหัด",
-components:[row]
-});
-
-}
-
-// ===== Anti Spam =====
-
+// ข้ามแอดมิน
 if(
 message.member.permissions.has(
 PermissionsBitField.Flags.Administrator
 )
-)return;
+) return;
 
 const userId = message.author.id;
 const now = Date.now();
 
-if(!userMessages.has(userId)){
-userMessages.set(userId, []);
+let data = userMessages.get(userId);
+
+if(!data){
+data = {
+count: 1,
+lastMessage: now
+};
+
+userMessages.set(userId, data);
+
+return;
 }
 
-const timestamps = userMessages.get(userId);
+// รีเซ็ตถ้าเกิน 5 วินาที
+if(now - data.lastMessage > 5000){
 
-timestamps.push(now);
+data.count = 1;
+data.lastMessage = now;
 
-const filtered = timestamps.filter(
-time => now - time < 5000
+return;
+}
+
+data.count++;
+data.lastMessage = now;
+
+console.log(
+`${message.author.tag}: ${data.count}`
 );
 
-userMessages.set(userId, filtered);
-
-// ส่ง 5 ข้อความใน 5 วิ
-if(filtered.length >= 5){
+// เตือน
+if(data.count >= 5){
 
 await message.delete().catch(()=>{});
 
@@ -91,11 +82,11 @@ content:`⚠️ ${message.author} กรุณาหยุดสแปม`
 
 }
 
-// ส่ง 10 ข้อความใน 5 วิ
-if(filtered.length >= 10){
+// Timeout
+if(data.count >= 10){
 
 await message.member.timeout(
-10 * 60 * 1000,
+600000,
 "Spam detected"
 ).catch(()=>{});
 
@@ -103,43 +94,8 @@ await message.channel.send({
 content:`🚫 ${message.author} ถูก Timeout 10 นาที`
 });
 
-}
-
-});
-
-client.on(
-Events.InteractionCreate,
-async interaction=>{
-
-if(!interaction.isButton()) return;
-
-if(interaction.customId==="verify"){
-
-const role =
-interaction.guild.roles.cache.get(
-ROLE_ID
-);
-
-if(!role){
-
-return interaction.reply({
-content:"❌ ไม่พบยศ",
-ephemeral:true
-});
-
-}
-
-await interaction.member.roles.add(
-role
-);
-
-await interaction.reply({
-content:"✅ รับยศเรียบร้อย",
-ephemeral:true
-});
+data.count = 0;
 
 }
 
 });
-
-client.login(TOKEN);
