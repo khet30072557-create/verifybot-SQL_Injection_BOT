@@ -117,4 +117,12 @@ ephemeral:true
 
 });
 
+process.on("uncaughtException", (err) => {
+console.error("CRASH:", err);
+});
+
+process.on("unhandledRejection", (err) => {
+console.error("PROMISE ERROR:", err);
+});
+
 client.login(TOKEN);
