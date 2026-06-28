@@ -45,7 +45,7 @@ new ButtonBuilder()
 );
 
 await message.channel.send({
-content:"กดปุ่มเพื่อยืนยันตัวตน",
+content:"กดปุ่มเพื่อยืนยันตัวตนว่าเป็นมนุษย์ที่พร้อมเป็นเเฮกเกอร์ฝึกหัด",
 components:[row]
 });
 
