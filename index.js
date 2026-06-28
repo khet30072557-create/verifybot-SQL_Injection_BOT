@@ -21,7 +21,7 @@ GatewayIntentBits.MessageContent
 });
 const ROLE_ID = "1520398527069687901";
 
-client.once("ready", () => {
+client.once(Events.ClientReady, () => {
 console.log(`ออนไลน์: ${client.user.tag}`);
 });
 
