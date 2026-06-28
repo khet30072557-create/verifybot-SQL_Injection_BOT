@@ -49,7 +49,7 @@ new ButtonBuilder()
 );
 
 await message.channel.send({
-content:"กดปุ่มเพื่อยืนยันตัวตน",
+content:"กดปุ่มเพื่อยืนยันตัวตนเป็นเเฮกเกอร์ฝึกหัด",
 components:[row]
 });
 
