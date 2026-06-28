@@ -68,4 +68,56 @@ ephemeral:true
 
 });
 
+const userMessages = new Map();
+
+client.on(Events.MessageCreate, async (message) => {
+
+if(message.author.bot) return;
+
+if(message.member.permissions.has("Administrator"))
+return;
+
+const userId = message.author.id;
+const now = Date.now();
+
+if(!userMessages.has(userId)){
+userMessages.set(userId, []);
+}
+
+const timestamps = userMessages.get(userId);
+
+timestamps.push(now);
+
+const filtered = timestamps.filter(
+time => now - time < 5000
+);
+
+userMessages.set(userId, filtered);
+
+// 5 ข้อความใน 5 วินาที
+if(filtered.length >= 5){
+
+await message.delete().catch(()=>{});
+
+await message.channel.send({
+content:`${message.author} กรุณาหยุดสแปม`
+});
+
+}
+
+// 10 ข้อความใน 5 วินาที
+if(filtered.length >= 10){
+
+await message.member.timeout(
+600000,
+"Spam detected"
+).catch(()=>{});
+
+await message.channel.send({
+content:`🚫 ${message.author} ถูก Timeout 10 นาที`
+});
+
+}
+
+});
 client.login(TOKEN);
