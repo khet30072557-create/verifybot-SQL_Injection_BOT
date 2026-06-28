@@ -30,6 +30,10 @@ console.log(`ออนไลน์: ${client.user.tag}`);
 
 client.on(Events.MessageCreate, async (message) => {
 
+console.log("มีข้อความ:", message.content);
+
+if(message.author.bot) return;
+if(!message.guild) return;
 if(message.author.bot) return;
 if(!message.guild) return;
 
