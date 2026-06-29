@@ -37,6 +37,25 @@ client.on(Events.MessageCreate, async (message) => {
 if(message.author.bot) return;
 if(!message.guild) return;
 
+// VERIFY ต้องมาก่อน
+if(message.content === "!verify"){
+
+const row = new ActionRowBuilder()
+.addComponents(
+new ButtonBuilder()
+.setCustomId("verify")
+.setLabel("✅ รับยศแฮกเกอร์ฝึกหัด")
+.setStyle(ButtonStyle.Success)
+);
+
+await message.channel.send({
+content:"กดปุ่มเพื่อยืนยันตัวตน",
+components:[row]
+});
+
+return;
+}
+
 // ข้ามแอดมิน
 if(
 message.member.permissions.has(
