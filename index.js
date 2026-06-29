@@ -22,23 +22,35 @@ GatewayIntentBits.MessageContent
 ]
 });
 
-const userMessages = new Map();
+const spamData = new Map();
 
 client.once(Events.ClientReady, () => {
 console.log(`ออนไลน์: ${client.user.tag}`);
 });
 
+// =====================
+// MESSAGE EVENT
+// =====================
+
 client.on(Events.MessageCreate, async (message) => {
 
-console.log("มีข้อความ:", message.content);
-
-if(message.author.bot) return;
-if(!message.guild) return;
 if(message.author.bot) return;
 if(!message.guild) return;
 
-// Verify
-if(message.content === "!verify") {
+// ข้ามแอดมิน
+if(
+message.member.permissions.has(
+PermissionsBitField.Flags.Administrator
+)
+){
+return;
+}
+
+// =====================
+// VERIFY
+// =====================
+
+if(message.content === "!verify"){
 
 const row = new ActionRowBuilder()
 .addComponents(
@@ -55,60 +67,121 @@ components:[row]
 
 }
 
-// Anti-spam
-if(message.member.permissions.has(
-PermissionsBitField.Flags.Administrator
-)) return;
+// =====================
+// ANTI SPAM
+// =====================
 
 const userId = message.author.id;
 const now = Date.now();
 
-if(!userMessages.has(userId)){
-userMessages.set(userId, []);
+if(!spamData.has(userId)){
+
+spamData.set(userId,{
+messages:[],
+lastContent:"",
+warned:false
+});
+
 }
 
-const timestamps = userMessages.get(userId);
+const data = spamData.get(userId);
 
-timestamps.push(now);
+// เก็บเวลา
+data.messages.push(now);
 
-const filtered = timestamps.filter(
-time => now - time < 5000
+// เก็บแค่ 5 วินาทีล่าสุด
+data.messages = data.messages.filter(
+time => now-time < 5000
 );
 
-userMessages.set(userId, filtered);
+// ตรวจข้อความซ้ำ
+let repeated = false;
 
-if(filtered.length >= 5){
+if(
+message.content === data.lastContent &&
+message.content.length > 1
+){
+repeated = true;
+}
+
+data.lastContent = message.content;
+
+
+// ส่งรัวเกิน 5 ครั้ง
+if(
+data.messages.length >= 5 ||
+repeated
+){
 
 await message.delete().catch(()=>{});
 
+// กันเตือนรัว
+if(!data.warned){
+
+data.warned=true;
+
 await message.channel.send({
-content:`⚠️ ${message.author} กรุณาหยุดสแปม`
+content:
+`⚠️ ${message.author} กรุณาหยุดสแปม`
 });
+
+setTimeout(()=>{
+data.warned=false;
+},5000);
 
 }
 
-if(filtered.length >= 10){
+}
+
+
+// ส่งรัวเกิน 10 ครั้ง
+if(data.messages.length >=10){
 
 await message.member.timeout(
-600000,
+10*60*1000,
 "Spam detected"
 ).catch(()=>{});
 
+await message.channel.send({
+content:
+`🚫 ${message.author} ถูก Timeout 10 นาที`
+});
+
+spamData.delete(userId);
+
 }
 
 });
 
-client.on(Events.InteractionCreate, async (interaction)=>{
+// =====================
+// BUTTON VERIFY
+// =====================
+
+client.on(
+Events.InteractionCreate,
+async interaction => {
 
 if(!interaction.isButton()) return;
 
 if(interaction.customId==="verify"){
 
-const role = interaction.guild.roles.cache.get(ROLE_ID);
+const role =
+interaction.guild.roles.cache.get(
+ROLE_ID
+);
 
-if(role){
+if(!role){
 
-await interaction.member.roles.add(role);
+return interaction.reply({
+content:"❌ ไม่พบยศ",
+ephemeral:true
+});
+
+}
+
+await interaction.member.roles.add(
+role
+);
 
 await interaction.reply({
 content:"✅ รับยศเรียบร้อย",
@@ -117,16 +190,6 @@ ephemeral:true
 
 }
 
-}
-
-});
-
-process.on("uncaughtException", (err) => {
-console.error("CRASH:", err);
-});
-
-process.on("unhandledRejection", (err) => {
-console.error("PROMISE ERROR:", err);
 });
 
 client.login(TOKEN);
